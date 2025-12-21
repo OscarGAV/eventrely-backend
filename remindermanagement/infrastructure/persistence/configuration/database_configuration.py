@@ -1,0 +1,78 @@
+import os
+from typing import AsyncGenerator, Any
+from sqlalchemy import event
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.orm import declarative_base
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Database URL from environment
+DATABASE_URL = os.environ.get(
+    "DATABASE_URL",
+    "postgresql+psycopg://root:1234@localhost:5432/reminder_db"
+)
+
+# Create async engine
+engine = create_async_engine(
+    DATABASE_URL,
+    echo=False,
+    pool_size=10,
+    max_overflow=20,
+    pool_pre_ping=True,
+    pool_recycle=3600
+)
+
+# Configure timezone on connection
+@event.listens_for(engine.sync_engine, "connect")
+def set_timezone(dbapi_conn, connection_record):
+    """Set connection timezone to UTC"""
+    cursor = dbapi_conn.cursor()
+    cursor.execute("SET TIME ZONE 'UTC'")
+    cursor.close()
+
+# Session factory
+AsyncSessionLocal = async_sessionmaker(
+    engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autocommit=False,
+    autoflush=False
+)
+
+# Base for ORM models
+Base = declarative_base()
+
+# Initialize database
+async def init_db():
+    """
+    Initialize database tables
+    Auto-creates all tables defined in Base metadata
+    """
+    logger.info("Initializing database...")
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("✓ Database initialized successfully")
+    except Exception as e:
+        logger.error(f"✗ Error initializing database: {str(e)}")
+        raise
+
+# Close database connections
+async def close_db():
+    """Close database connections gracefully"""
+    logger.info("Closing database connections...")
+    await engine.dispose()
+    logger.info("✓ Database connections closed")
+
+# Dependency for FastAPI
+async def get_db_session() -> AsyncGenerator[AsyncSession, Any]:
+    """
+    FastAPI dependency to get database session
+    Automatically handles session lifecycle
+    """
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        finally:
+            await session.close()
