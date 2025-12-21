@@ -3,6 +3,7 @@ import uvicorn
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from remindermanagement.infrastructure.persistence.configuration.database_configuration import init_db, close_db
 from remindermanagement.interface.api.rest.controllers.EventController import router as event_router
 
@@ -19,7 +20,7 @@ async def lifespan(_: FastAPI):
     """
     Application lifecycle management.
     Handles startup and shutdown operations.
-    The '_' argument prevents shadowing the outer 'app' variable 
+    The '_' argument prevents shadowing the outer 'app' variable
     and signals that the variable is not used inside the function.
     """
     # Startup
@@ -45,12 +46,12 @@ async def lifespan(_: FastAPI):
 
 # Create FastAPI application
 app = FastAPI(
-    title="EventRELY",
+    title="EventRELY API Platform",
     description="A backend for event reminders",
     version="1.0.0",
     lifespan=lifespan,
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url=None,      # Disable default to use custom
+    redoc_url=None,     # Disable default to use custom
     openapi_url="/openapi.json"
 )
 
@@ -67,14 +68,40 @@ app.add_middleware(
 app.include_router(event_router)
 
 
+# Custom documentation endpoints to fix ReDoc tracking prevention issues
+@app.get("/docs", include_in_schema=False)
+async def custom_swagger_ui_html():
+    """Custom Swagger UI with unpkg CDN"""
+    return get_swagger_ui_html(
+        openapi_url="/openapi.json",
+        title=f"{app.title} - Swagger UI",
+        swagger_js_url="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-bundle.js",
+        swagger_css_url="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui.css",
+    )
+
+
+@app.get("/redoc", include_in_schema=False)
+async def custom_redoc_html():
+    """Custom ReDoc with unpkg CDN to avoid tracking prevention blocking"""
+    return get_redoc_html(
+        openapi_url="/openapi.json",
+        title=f"{app.title} - ReDoc",
+        redoc_js_url="https://unpkg.com/redoc@2.1.3/bundles/redoc.standalone.js",
+    )
+
+
 @app.get("/", tags=["Root"])
 async def root():
     """Root endpoint with API information"""
     return {
-        "service": "EventRELY",
+        "service": "EventRELY API Platform",
         "status": "running",
         "architecture": "DDD + CQRS",
-        "documentation": "/docs"
+        "documentation": {
+            "swagger_ui": "/docs",
+            "redoc": "/redoc",
+            "openapi_spec": "/openapi.json"
+        }
     }
 
 

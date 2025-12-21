@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, UTC
 
 @dataclass(frozen=True)
 class EventDate:
@@ -12,8 +12,8 @@ class EventDate:
 
     def is_in_past(self) -> bool:
         """Verifica si la fecha está en el pasado"""
-        return self.value < datetime.utcnow()
+        return self.value < datetime.now(UTC)
 
     def is_upcoming(self) -> bool:
         """Verifica si la fecha es futura"""
-        return self.value >= datetime.utcnow()
+        return self.value >= datetime.now(UTC)

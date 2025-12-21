@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 # Database URL from environment
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
-    "postgresql+psycopg://user:password@localhost:5432/reminder_db"
+    "postgresql+psycopg://postgres:1234@localhost:5432/reminder_db"
 )
 
 # Create async engine

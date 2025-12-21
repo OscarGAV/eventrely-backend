@@ -1,9 +1,21 @@
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 from remindermanagement.domain.model.aggregates.Event import Event
 from remindermanagement.domain.model.commands.CreateEventCommand import CreateEventCommand
 from remindermanagement.domain.model.commands.UpdateEventCommand import UpdateEventCommand
 from remindermanagement.domain.model.commands.DeleteEventCommand import DeleteEventCommand
 from remindermanagement.domain.repositories.EventRepository import EventRepository
+
+
+def ensure_utc(dt: datetime) -> datetime:
+    """Ensure datetime is timezone-aware (UTC)"""
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
+def utc_now() -> datetime:
+    """Get current UTC time"""
+    return datetime.now(timezone.utc)
 
 
 class CommandServiceImpl:
@@ -20,8 +32,12 @@ class CommandServiceImpl:
         Crear nuevo evento
         Valida y persiste el agregado
         """
+        # Ensure event_date is timezone-aware
+        event_date = ensure_utc(command.event_date)
+        current_time = utc_now()
+
         # Validación de negocio
-        if command.event_date < datetime.now(UTC):
+        if event_date < current_time:
             raise ValueError("Cannot create event in the past")
 
         if not command.title.strip():
@@ -32,7 +48,7 @@ class CommandServiceImpl:
             user_id=command.user_id,
             title=command.title,
             description=command.description,
-            event_date=command.event_date,
+            event_date=event_date,
             status="pending"
         )
 
@@ -58,7 +74,9 @@ class CommandServiceImpl:
             )
 
         if command.event_date:
-            event.reschedule(command.event_date)
+            # Ensure timezone-aware
+            event_date = ensure_utc(command.event_date)
+            event.reschedule(event_date)
 
         return await self._repository.save(event)
 

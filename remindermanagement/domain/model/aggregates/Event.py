@@ -1,6 +1,12 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.orm import Mapped, mapped_column
-from infrastructure.persistence.configuration.database_configuration import Base
+from sqlalchemy import DateTime
+from remindermanagement.infrastructure.persistence.configuration.database_configuration import Base
+
+
+def utc_now() -> datetime:
+    """Get current UTC time as timezone-aware datetime"""
+    return datetime.now(timezone.utc)
 
 
 class Event(Base):
@@ -14,10 +20,10 @@ class Event(Base):
     user_id: Mapped[str] = mapped_column(nullable=False, index=True)
     title: Mapped[str] = mapped_column(nullable=False)
     description: Mapped[str | None] = mapped_column(nullable=True)
-    event_date: Mapped[datetime] = mapped_column(nullable=False, index=True)
+    event_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     status: Mapped[str] = mapped_column(default="pending")
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
 
     # =========================================================================
     # DOMAIN LOGIC - Métodos que protegen invariantes del negocio
@@ -28,11 +34,17 @@ class Event(Base):
         Reprogramar evento con validación de negocio
         Regla: No se puede programar un evento en el pasado
         """
-        if new_date < datetime.utcnow():
+        # Ensure new_date is timezone-aware
+        if new_date.tzinfo is None:
+            new_date = new_date.replace(tzinfo=timezone.utc)
+
+        current_time = utc_now()
+
+        if new_date < current_time:
             raise ValueError("Cannot schedule event in the past")
 
         self.event_date = new_date
-        self.updated_at = datetime.utcnow()
+        self.updated_at = current_time
 
     def update_details(self, title: str | None = None, description: str | None = None) -> None:
         """Actualizar título y/o descripción"""
@@ -44,7 +56,7 @@ class Event(Base):
         if description is not None:
             self.description = description
 
-        self.updated_at = datetime.utcnow()
+        self.updated_at = utc_now()
 
     def mark_completed(self) -> None:
         """
@@ -55,7 +67,7 @@ class Event(Base):
             raise ValueError(f"Cannot complete event with status: {self.status}")
 
         self.status = "completed"
-        self.updated_at = datetime.utcnow()
+        self.updated_at = utc_now()
 
     def cancel(self) -> None:
         """
@@ -66,17 +78,25 @@ class Event(Base):
             raise ValueError("Cannot cancel a completed event")
 
         self.status = "cancelled"
-        self.updated_at = datetime.utcnow()
+        self.updated_at = utc_now()
 
     def mark_expired(self) -> None:
         """Marcar como expirado (proceso automático)"""
-        if self.status == "pending" and self.event_date < datetime.utcnow():
+        event_date = self.event_date
+        if event_date.tzinfo is None:
+            event_date = event_date.replace(tzinfo=timezone.utc)
+
+        if self.status == "pending" and event_date < utc_now():
             self.status = "expired"
-            self.updated_at = datetime.utcnow()
+            self.updated_at = utc_now()
 
     def is_upcoming(self) -> bool:
         """Verifica si el evento es futuro y está pendiente"""
-        return self.status == "pending" and self.event_date >= datetime.utcnow()
+        event_date = self.event_date
+        if event_date.tzinfo is None:
+            event_date = event_date.replace(tzinfo=timezone.utc)
+
+        return self.status == "pending" and event_date >= utc_now()
 
     def to_dict(self) -> dict:
         """Serialización para respuestas API"""
