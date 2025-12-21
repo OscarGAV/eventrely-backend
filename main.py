@@ -1,7 +1,7 @@
 import logging
 import uvicorn
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from datetime import datetime, UTC
 from sqlalchemy import text
 from fastapi.middleware.cors import CORSMiddleware
@@ -123,17 +123,22 @@ async def health_check():
 """
 Endpoints para mantenimiento y keep-alive con Supabase
 """
-@app.get("/keepalive", tags=["Maintenance"], include_in_schema=False)
-async def keepalive():
+@app.api_route("/keepalive", methods=["GET", "HEAD"], tags=["Maintenance"], include_in_schema=False)
+async def keepalive(request: Request):
     """
     Keep-alive endpoint para evitar que Supabase pause el proyecto.
-    Hace una query simple a la base de datos para mantenerla activa.
+    Soporta tanto GET como HEAD (usado por UptimeRobot y otros monitores).
 
-    Configurar un cron externo (cron-job.org, UptimeRobot) para llamar
+    Configurar un cron externo (UptimeRobot, cron-job.org) para llamar
     este endpoint cada 5-10 minutos.
     """
     from remindermanagement.infrastructure.persistence.configuration.database_configuration import get_db_session
 
+    # Si es HEAD, solo devolver headers sin body
+    if request.method == "HEAD":
+        return {"status": "alive"}
+
+    # Si es GET, hacer query a la base de datos
     try:
         async for session in get_db_session():
             # Ejecutar query simple para mantener la conexión activa
@@ -155,16 +160,51 @@ async def keepalive():
             "message": str(e)
         }
 
-@app.get("/ping", tags=["Maintenance"], include_in_schema=False)
-async def ping():
+
+@app.api_route("/ping", methods=["GET", "HEAD"], tags=["Maintenance"], include_in_schema=False)
+async def ping(request: Request):
     """
     Simple ping endpoint sin interacción con base de datos.
     Útil para verificar que la API está respondiendo.
+    Soporta GET y HEAD.
     """
+    if request.method == "HEAD":
+        return {"status": "pong"}
+
     return {
         "status": "pong",
         "timestamp": datetime.now(UTC).isoformat()
     }
+
+
+@app.get("/health-check", tags=["Maintenance"])
+async def health_check_with_db():
+    """
+    Health check completo con verificación de base de datos.
+    Usa este endpoint si quieres monitorear también la conexión a PostgreSQL.
+    """
+    from remindermanagement.infrastructure.persistence.configuration.database_configuration import get_db_session
+
+    try:
+        async for session in get_db_session():
+            result = await session.execute(text("SELECT 1"))
+            db_status = result.scalar()
+
+            return {
+                "status": "healthy",
+                "api": "running",
+                "database": "connected" if db_status == 1 else "disconnected",
+                "timestamp": datetime.now(UTC).isoformat()
+            }
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return {
+            "status": "degraded",
+            "api": "running",
+            "database": "error",
+            "error": str(e),
+            "timestamp": datetime.now(UTC).isoformat()
+        }
 
 
 """
