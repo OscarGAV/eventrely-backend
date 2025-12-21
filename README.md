@@ -1,6 +1,11 @@
 # EventRELY - Event Reminder System
 
-A backend for event reminders built with FastAPI, following Domain-Driven Design (DDD) and CQRS principles.
+A backend for event reminders application built with FastAPI and Supabase connection.
+
+[![Python](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/release/python-3130/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115.0-green.svg)](https://fastapi.tiangolo.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-blue.svg)](https://www.postgresql.org/docs/17/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## 🏗️ Architecture
 
@@ -10,58 +15,12 @@ A backend for event reminders built with FastAPI, following Domain-Driven Design
 - **Aggregate Pattern**: Event as the Aggregate Root
 - **Repository Pattern**: Abstract data access
 
-## 🚀 Quick Start
+## 🚀 Links
 
-### Prerequisites
-
-- Python 3.13
-- PostgreSQL 17
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd eventrely
-   ```
-
-2. **Create virtual environment**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Configure environment**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your database credentials
-   ```
-
-5. **Start PostgreSQL**
-   ```bash
-   # Using Docker
-   docker run --name eventrely-db \
-     -e POSTGRES_USER=user \
-     -e POSTGRES_PASSWORD=password \
-     -e POSTGRES_DB=reminder_db \
-     -p 5432:5432 \
-     -d postgres:16
-   ```
-
-6. **Run the application**
-   ```bash
-   python main.py
-   ```
-
-The API will be available at:
-- **API**: http://localhost:8000
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
+- **API**: http://eventrely-api-platofrm.azurewebsites.net
+- **Swagger UI**: http://eventrely-api-platofrm.azurewebsites.net/docs
+- **ReDocly UI**: http://eventrely-api-platofrm.azurewebsites.net/redoc
+- **Status Page**: https://stats.uptimerobot.com/MBVmW8Pm1L
 
 ## 🔌 API Endpoints
 
@@ -100,41 +59,6 @@ curl -X POST http://localhost:8000/api/v1/events \
 ```bash
 curl http://localhost:8000/api/v1/events/user/user_123/upcoming?limit=10
 ```
-
-## 🏛️ Domain Model
-
-### Event Aggregate
-
-The `Event` class is the Aggregate Root that:
-- Protects business invariants
-- Contains domain logic
-- Acts as the ORM model (inherits from SQLAlchemy Base)
-
-**Business Rules**:
-- Events cannot be scheduled in the past
-- Only pending events can be completed
-- Completed events cannot be cancelled
-
-### Value Objects
-
-- **EventId**: Represents event identifier with validation
-- **EventDate**: Represents event date with business methods
-- **ReminderStatus**: Enum for event statuses
-
-### Commands
-
-Immutable data structures representing write intentions:
-- `CreateEventCommand`
-- `UpdateEventCommand`
-- `DeleteEventCommand`
-
-### Queries
-
-Immutable data structures representing read requests:
-- `GetEventByIdQuery`
-- `GetEventsByDateQuery`
-- `GetUpcomingEventsQuery`
-
 
 ## 🔒 Security Notes
 
