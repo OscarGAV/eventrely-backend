@@ -2,7 +2,7 @@ from datetime import datetime, date, UTC
 from fastapi import APIRouter, Depends, HTTPException, Query, Path
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from remindermanagement.infrastructure.persistence.configuration.database_configuration import get_db_session
+from shared.infrastructure.persistence.configuration.database_configuration import get_db_session
 from remindermanagement.application.internal.commandservice.CommandServiceImpl import CommandServiceImpl
 from remindermanagement.application.internal.queryservice.QueryServiceImpl import QueryServiceImpl
 from remindermanagement.infrastructure.persistence.repositories.EventRepositoryImpl import EventRepositoryImpl
@@ -40,7 +40,6 @@ async def create_event(
     - **user_id**: User identifier
     - **title**: Event title (required, max 200 chars)
     - **event_date**: Event date and time in ISO 8601 format
-    - **description**: Optional event description (max 1000 chars)
     """
     try:
         repository = EventRepositoryImpl(db)
@@ -79,7 +78,6 @@ async def update_event(
 
     You can update one or more fields:
     - **title**: New event title
-    - **description**: New description
     - **event_date**: New date/time for the event
     """
     try:

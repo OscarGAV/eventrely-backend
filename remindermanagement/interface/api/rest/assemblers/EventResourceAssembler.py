@@ -27,7 +27,6 @@ class EventResourceAssembler:
             user_id=resource.user_id,
             title=resource.title,
             event_date=resource.event_date,
-            description=resource.description
         )
 
     @staticmethod
@@ -36,7 +35,6 @@ class EventResourceAssembler:
         return UpdateEventCommand(
             event_id=event_id,
             title=resource.title,
-            description=resource.description,
             event_date=resource.event_date
         )
 
@@ -82,7 +80,6 @@ class EventResourceAssembler:
             id=event.id,
             user_id=event.user_id,
             title=event.title,
-            description=event.description,
             event_date=event.event_date,
             status=event.status,
             created_at=event.created_at,

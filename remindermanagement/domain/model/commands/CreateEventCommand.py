@@ -10,4 +10,3 @@ class CreateEventCommand:
     user_id: str
     title: str
     event_date: datetime
-    description: str | None = None

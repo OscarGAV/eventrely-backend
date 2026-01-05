@@ -3,6 +3,7 @@ from remindermanagement.domain.model.aggregates.Event import Event
 from remindermanagement.domain.model.commands.CreateEventCommand import CreateEventCommand
 from remindermanagement.domain.model.commands.UpdateEventCommand import UpdateEventCommand
 from remindermanagement.domain.model.commands.DeleteEventCommand import DeleteEventCommand
+from remindermanagement.domain.model.value_objects.ReminderStatus import ReminderStatus
 from remindermanagement.domain.repositories.EventRepository import EventRepository
 
 
@@ -27,12 +28,11 @@ class CommandServiceImpl:
     def __init__(self, repository: EventRepository):
         self._repository = repository
 
+    """
+    Crear un nuevo evento
+    """
     async def create_event(self, command: CreateEventCommand) -> Event:
-        """
-        Crear nuevo evento
-        Valida y persiste el agregado
-        """
-        # Ensure event_date is timezone-aware
+        # Asegurar que la fecha del evento es timezone-aware (UTC)
         event_date = ensure_utc(command.event_date)
         current_time = utc_now()
 
@@ -47,30 +47,27 @@ class CommandServiceImpl:
         event = Event(
             user_id=command.user_id,
             title=command.title,
-            description=command.description,
             event_date=event_date,
-            status="pending"
+            status=ReminderStatus.PENDING,
         )
 
-        # Persistir
         saved_event = await self._repository.save(event)
-
-        # Aquí podrías emitir EventCreated si implementas event handlers
-
         return saved_event
 
+    """
+    Actualizar un evento existente
+    """
     async def update_event(self, command: UpdateEventCommand) -> Event:
-        """Actualizar evento existente"""
+        # Validar que el evento existe
         event = await self._repository.find_by_id(command.event_id)
 
         if not event:
             raise ValueError(f"Event not found: {command.event_id}")
 
         # Aplicar cambios usando métodos del agregado
-        if command.title or command.description:
+        if command.title:
             event.update_details(
-                title=command.title,
-                description=command.description
+                title=command.title
             )
 
         if command.event_date:
@@ -80,8 +77,11 @@ class CommandServiceImpl:
 
         return await self._repository.save(event)
 
+    """
+    Eliminar evento
+    """
     async def delete_event(self, command: DeleteEventCommand) -> None:
-        """Eliminar evento"""
+        # Validar que el evento existe
         event = await self._repository.find_by_id(command.event_id)
 
         if not event:
@@ -89,8 +89,11 @@ class CommandServiceImpl:
 
         await self._repository.delete(event)
 
+    """
+    Asignar evento como completado
+    """
     async def complete_event(self, event_id: int) -> Event:
-        """Marcar evento como completado"""
+        # Validar que el evento existe
         event = await self._repository.find_by_id(event_id)
 
         if not event:
@@ -99,8 +102,11 @@ class CommandServiceImpl:
         event.mark_completed()
         return await self._repository.save(event)
 
+    """
+    Cancelar evento
+    """
     async def cancel_event(self, event_id: int) -> Event:
-        """Cancelar evento"""
+        # Validar que el evento existe
         event = await self._repository.find_by_id(event_id)
 
         if not event:

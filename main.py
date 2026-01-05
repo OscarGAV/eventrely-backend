@@ -6,7 +6,7 @@ from datetime import datetime, UTC
 from sqlalchemy import text
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
-from remindermanagement.infrastructure.persistence.configuration.database_configuration import init_db, close_db
+from shared.infrastructure.persistence.configuration.database_configuration import init_db, close_db
 from remindermanagement.interface.api.rest.controllers.EventController import router as event_router
 
 """
@@ -132,7 +132,7 @@ async def keepalive(request: Request):
     Configurar un cron externo (UptimeRobot, cron-job.org) para llamar
     este endpoint cada 5-10 minutos.
     """
-    from remindermanagement.infrastructure.persistence.configuration.database_configuration import get_db_session
+    from shared.infrastructure.persistence.configuration.database_configuration import get_db_session
 
     # Si es HEAD, solo devolver headers sin body
     if request.method == "HEAD":
@@ -183,7 +183,7 @@ async def health_check_with_db():
     Health check completo con verificación de base de datos.
     Usa este endpoint si quieres monitorear también la conexión a PostgreSQL.
     """
-    from remindermanagement.infrastructure.persistence.configuration.database_configuration import get_db_session
+    from shared.infrastructure.persistence.configuration.database_configuration import get_db_session
 
     try:
         async for session in get_db_session():

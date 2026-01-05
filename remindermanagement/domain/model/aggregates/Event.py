@@ -1,7 +1,9 @@
 from datetime import datetime, timezone
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import DateTime
-from remindermanagement.infrastructure.persistence.configuration.database_configuration import Base
+
+from remindermanagement.domain.model.value_objects.ReminderStatus import ReminderStatus
+from shared.infrastructure.persistence.configuration.database_configuration import Base
 
 
 def utc_now() -> datetime:
@@ -19,9 +21,8 @@ class Event(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[str] = mapped_column(nullable=False, index=True)
     title: Mapped[str] = mapped_column(nullable=False)
-    description: Mapped[str | None] = mapped_column(nullable=True)
     event_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
-    status: Mapped[str] = mapped_column(default="pending")
+    status: Mapped[str] = mapped_column(default=ReminderStatus.PENDING)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
 
@@ -46,15 +47,12 @@ class Event(Base):
         self.event_date = new_date
         self.updated_at = current_time
 
-    def update_details(self, title: str | None = None, description: str | None = None) -> None:
-        """Actualizar título y/o descripción"""
+    def update_details(self, title: str | None = None) -> None:
+        """Actualizar título del evento"""
         if title is not None:
             if not title.strip():
                 raise ValueError("Title cannot be empty")
             self.title = title
-
-        if description is not None:
-            self.description = description
 
         self.updated_at = utc_now()
 
@@ -63,10 +61,10 @@ class Event(Base):
         Marcar como completado
         Regla: Solo eventos pendientes pueden completarse
         """
-        if self.status != "pending":
+        if self.status != ReminderStatus.PENDING:
             raise ValueError(f"Cannot complete event with status: {self.status}")
 
-        self.status = "completed"
+        self.status = ReminderStatus.COMPLETED
         self.updated_at = utc_now()
 
     def cancel(self) -> None:
@@ -74,21 +72,11 @@ class Event(Base):
         Cancelar evento
         Regla: No se pueden cancelar eventos ya completados
         """
-        if self.status == "completed":
+        if self.status != ReminderStatus.PENDING:
             raise ValueError("Cannot cancel a completed event")
 
-        self.status = "cancelled"
+        self.status = ReminderStatus.CANCELLED
         self.updated_at = utc_now()
-
-    def mark_expired(self) -> None:
-        """Marcar como expirado (proceso automático)"""
-        event_date = self.event_date
-        if event_date.tzinfo is None:
-            event_date = event_date.replace(tzinfo=timezone.utc)
-
-        if self.status == "pending" and event_date < utc_now():
-            self.status = "expired"
-            self.updated_at = utc_now()
 
     def is_upcoming(self) -> bool:
         """Verifica si el evento es futuro y está pendiente"""
@@ -96,7 +84,7 @@ class Event(Base):
         if event_date.tzinfo is None:
             event_date = event_date.replace(tzinfo=timezone.utc)
 
-        return self.status == "pending" and event_date >= utc_now()
+        return self.status == ReminderStatus.PENDING and event_date >= utc_now()
 
     def to_dict(self) -> dict:
         """Serialización para respuestas API"""
@@ -104,7 +92,6 @@ class Event(Base):
             "id": self.id,
             "user_id": self.user_id,
             "title": self.title,
-            "description": self.description,
             "event_date": self.event_date.isoformat(),
             "status": self.status,
             "created_at": self.created_at.isoformat(),
