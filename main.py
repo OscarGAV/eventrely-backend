@@ -8,6 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from shared.infrastructure.persistence.configuration.database_configuration import init_db, close_db
 from remindermanagement.interface.api.rest.controllers.EventController import router as event_router
+from iam.interface.api.rest.controllers.AuthController import router as auth_router
+
 
 """
 Configure logs
@@ -53,7 +55,7 @@ Create FastAPI application
 """
 app = FastAPI(
     title="EventRELY API Platform",
-    description="A backend for event reminders",
+    description="A backend for event reminders with user authentication built using FastAPI and following DDD and CQRS principles.",
     version="1.0.0",
     lifespan=lifespan,
     docs_url=None,      # Disable default to use custom
@@ -72,7 +74,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(event_router)
+"""
+Include routers from bounded contexts
+"""
+app.include_router(auth_router)    # IAM Context: /api/v1/auth/*
+app.include_router(event_router)   # Event Management: /api/v1/events/*
 
 
 """

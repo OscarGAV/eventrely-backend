@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import String
 from shared.infrastructure.persistence.configuration.database_configuration import Base
+from iam.domain.model.valueobjects.UserRole import UserRole, UserRoleEnum
 import bcrypt
 
 
@@ -22,9 +23,30 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     full_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    role: Mapped[str] = mapped_column(String(20), default=UserRoleEnum.GENERAL.value, nullable=False)
     is_active: Mapped[bool] = mapped_column(default=True)
     created_at: Mapped[datetime] = mapped_column(default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(default=utc_now, onupdate=utc_now)
+
+    # =========================================================================
+    # DOMAIN LOGIC - Role Management
+    # =========================================================================
+
+    def get_role(self) -> UserRole:
+        """Get user role as Value Object"""
+        return UserRole.from_string(self.role)
+
+    def is_admin(self) -> bool:
+        """Check if user is admin"""
+        return self.get_role().is_admin()
+
+    def is_general_user(self) -> bool:
+        """Check if user is general user"""
+        return self.get_role().is_general()
+
+    def can_view_all_events(self) -> bool:
+        """Check if user can view all events (admin privilege)"""
+        return self.get_role().can_view_all_events()
 
     # =========================================================================
     # DOMAIN LOGIC - Password Management
@@ -112,6 +134,7 @@ class User(Base):
             "username": self.username,
             "email": self.email,
             "full_name": self.full_name,
+            "role": self.role,
             "is_active": self.is_active,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat()

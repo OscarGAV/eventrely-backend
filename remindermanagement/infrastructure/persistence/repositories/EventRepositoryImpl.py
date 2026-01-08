@@ -76,3 +76,55 @@ class EventRepositoryImpl:
         """Eliminar evento"""
         await self._session.delete(event)
         await self._session.commit()
+
+    # =========================================================================
+    # ADMIN METHODS - Para que admins puedan ver eventos de todos los usuarios
+    # =========================================================================
+
+    async def find_all(self) -> list[Event]:
+        """
+        Buscar TODOS los eventos (de todos los usuarios)
+        SOLO PARA ADMINS
+        """
+        result = await self._session.execute(
+            select(Event).order_by(Event.event_date.desc())
+        )
+        return list(result.scalars().all())
+
+    async def find_by_date(self, target_date: date) -> list[Event]:
+        """
+        Buscar TODOS los eventos en una fecha específica (de todos los usuarios)
+        SOLO PARA ADMINS
+        """
+        start_of_day = datetime.combine(target_date, datetime.min.time())
+        end_of_day = datetime.combine(target_date, datetime.max.time())
+
+        result = await self._session.execute(
+            select(Event)
+            .where(
+                and_(
+                    Event.event_date >= start_of_day,
+                    Event.event_date <= end_of_day
+                )
+            )
+            .order_by(Event.event_date)
+        )
+        return list(result.scalars().all())
+
+    async def find_all_upcoming(self, from_date: datetime, limit: int) -> list[Event]:
+        """
+        Buscar TODOS los eventos próximos (de todos los usuarios)
+        SOLO PARA ADMINS
+        """
+        result = await self._session.execute(
+            select(Event)
+            .where(
+                and_(
+                    Event.event_date >= from_date,
+                    Event.status == "pending"
+                )
+            )
+            .order_by(Event.event_date)
+            .limit(limit)
+        )
+        return list(result.scalars().all())
