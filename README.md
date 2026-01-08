@@ -17,10 +17,9 @@ A backend for event reminders application built with FastAPI and Supabase connec
 
 ## 🚀 Links
 
-- **API**: http://eventrely-api-platofrm.azurewebsites.net
-- **Swagger UI**: http://eventrely-api-platofrm.azurewebsites.net/docs
-- **ReDocly UI**: http://eventrely-api-platofrm.azurewebsites.net/redoc
-- **Status Page**: https://stats.uptimerobot.com/MBVmW8Pm1L
+- **Swagger UI**: [https://eventrely-api-platform.azurewebsites.net/docs](https://eventrely-api-platform.azurewebsites.net/docs)
+- **ReDocly UI**: [https://eventrely-api-platform.azurewebsites.net/redoc](https://eventrely-api-platform.azurewebsites.net/redoc)
+- **Status Page**: [https://stats.uptimerobot.com/MBVmW8Pm1L](https://stats.uptimerobot.com/MBVmW8Pm1L)
 
 ## 🔌 API Endpoints
 
