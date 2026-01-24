@@ -1,8 +1,3 @@
-# =============================================================================
-# ACTUALIZACIÓN: EventController.py
-# Agregar protección JWT a los endpoints de eventos
-# =============================================================================
-
 from datetime import datetime, date, UTC
 from fastapi import APIRouter, Depends, HTTPException, Query, Path
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,18 +11,15 @@ from remindermanagement.interface.api.rest.resources.EventRequestResource import
 from remindermanagement.interface.api.rest.resources.EventResponseResource import EventResponse, EventListResponse
 from remindermanagement.interface.api.rest.assemblers.EventResourceAssembler import EventResourceAssembler
 
-# NUEVO: Import JWT dependency
-from iam.infrastructure.tokenservice.jwt.BearerTokenService import (
-    get_current_active_user,
-    get_current_general_user
-)
+# Import JWT dependency
+from iam.infrastructure.tokenservice.jwt.BearerTokenService import get_current_active_user
 from iam.domain.model.aggregates.User import User
 
 router = APIRouter(prefix="/api/v1/events", tags=["Events"])
 
 
 # =============================================================================
-# COMMANDS (Write Operations) - PROTEGIDOS CON JWT
+# COMMANDS (Write Operations) - PROTECTED WITH JWT
 # =============================================================================
 
 @router.post(
@@ -45,30 +37,27 @@ router = APIRouter(prefix="/api/v1/events", tags=["Events"])
 )
 async def create_event(
         request: CreateEventRequest,
-        current_user: User = Depends(get_current_general_user),  # SOLO GENERAL USERS
+        current_user: User = Depends(get_current_active_user),
         db: AsyncSession = Depends(get_db_session)
 ):
     """
     Create a new reminder event
 
-    **Requires authentication (JWT token) - GENERAL USERS ONLY**
+    **Requires authentication (JWT token)**
 
     - **title**: Event title (required, max 200 chars)
     - **event_date**: Event date and time in ISO 8601 format
     - **description**: Optional event description (max 1000 chars)
 
     Users can only create events for themselves.
-    Admin users cannot create events.
     """
     try:
         repository = EventRepositoryImpl(db)
         service = CommandServiceImpl(repository)
 
-        # IMPORTANTE: Sobrescribir user_id con el del token JWT
-        # Esto previene que usuarios creen eventos para otros usuarios
-        request.user_id = str(current_user.id)  # Usar el user_id del JWT
-
-        command = EventResourceAssembler.to_create_command(request)
+        # IMPORTANT: user_id comes from JWT token, not from request body
+        # This prevents users from creating events for other users
+        command = EventResourceAssembler.to_create_command(request, str(current_user.id))
         event = await service.create_event(command)
 
         return EventResourceAssembler.to_response(event)
@@ -96,22 +85,21 @@ async def create_event(
 async def update_event(
         event_id: int = Path(..., ge=1, description="Event ID to update"),
         request: UpdateEventRequest = ...,
-        current_user: User = Depends(get_current_general_user),  # SOLO GENERAL USERS
+        current_user: User = Depends(get_current_active_user),
         db: AsyncSession = Depends(get_db_session)
 ):
     """
     Update an existing event
 
-    **Requires authentication (JWT token) - GENERAL USERS ONLY**
+    **Requires authentication (JWT token)**
 
     Users can only update their own events.
-    Admin users cannot update events.
     """
     try:
         repository = EventRepositoryImpl(db)
         service = CommandServiceImpl(repository)
 
-        # NUEVO: Verificar que el evento pertenece al usuario
+        # Verify that the event belongs to the user
         existing_event = await repository.find_by_id(event_id)
         if not existing_event:
             raise HTTPException(status_code=404, detail=f"Event not found: {event_id}")
@@ -150,22 +138,21 @@ async def update_event(
 )
 async def delete_event(
         event_id: int = Path(..., ge=1, description="Event ID to delete"),
-        current_user: User = Depends(get_current_general_user),  # SOLO GENERAL USERS
+        current_user: User = Depends(get_current_active_user),
         db: AsyncSession = Depends(get_db_session)
 ):
     """
     Delete an event permanently
 
-    **Requires authentication (JWT token) - GENERAL USERS ONLY**
+    **Requires authentication (JWT token)**
 
     Users can only delete their own events.
-    Admin users cannot delete events.
     """
     try:
         repository = EventRepositoryImpl(db)
         service = CommandServiceImpl(repository)
 
-        # NUEVO: Verificar que el evento pertenece al usuario
+        # Verify that the event belongs to the user
         existing_event = await repository.find_by_id(event_id)
         if not existing_event:
             raise HTTPException(status_code=404, detail=f"Event not found: {event_id}")
@@ -204,21 +191,30 @@ async def delete_event(
 )
 async def complete_event(
         event_id: int = Path(..., ge=1, description="Event ID to complete"),
-        current_user: User = Depends(get_current_general_user),  # SOLO GENERAL USERS
+        current_user: User = Depends(get_current_active_user),
         db: AsyncSession = Depends(get_db_session)
 ):
-    """Mark an event as completed (requires authentication)"""
+    """
+    Mark an event as completed
+
+    **Requires authentication (JWT token)**
+
+    Users can only complete their own events.
+    """
     try:
         repository = EventRepositoryImpl(db)
         service = CommandServiceImpl(repository)
 
-        # Verificar ownership
+        # Verify ownership
         existing_event = await repository.find_by_id(event_id)
         if not existing_event:
             raise HTTPException(status_code=404, detail=f"Event not found: {event_id}")
 
         if existing_event.user_id != str(current_user.id):
-            raise HTTPException(status_code=403, detail="Not authorized")
+            raise HTTPException(
+                status_code=403,
+                detail="You don't have permission to complete this event"
+            )
 
         event = await service.complete_event(event_id)
         return EventResourceAssembler.to_response(event)
@@ -248,21 +244,30 @@ async def complete_event(
 )
 async def cancel_event(
         event_id: int = Path(..., ge=1, description="Event ID to cancel"),
-        current_user: User = Depends(get_current_general_user),  # SOLO GENERAL USERS
+        current_user: User = Depends(get_current_active_user),
         db: AsyncSession = Depends(get_db_session)
 ):
-    """Cancel an event (requires authentication)"""
+    """
+    Cancel an event
+
+    **Requires authentication (JWT token)**
+
+    Users can only cancel their own events.
+    """
     try:
         repository = EventRepositoryImpl(db)
         service = CommandServiceImpl(repository)
 
-        # Verificar ownership
+        # Verify ownership
         existing_event = await repository.find_by_id(event_id)
         if not existing_event:
             raise HTTPException(status_code=404, detail=f"Event not found: {event_id}")
 
         if existing_event.user_id != str(current_user.id):
-            raise HTTPException(status_code=403, detail="Not authorized")
+            raise HTTPException(
+                status_code=403,
+                detail="You don't have permission to cancel this event"
+            )
 
         event = await service.cancel_event(event_id)
         return EventResourceAssembler.to_response(event)
@@ -278,41 +283,35 @@ async def cancel_event(
 
 
 # =============================================================================
-# QUERIES (Read Operations) - PROTEGIDOS CON JWT
+# QUERIES (Read Operations) - PROTECTED WITH JWT
 # =============================================================================
 
 @router.get(
     "/",
     response_model=EventListResponse,
-    summary="Get all events",
-    description="General users see only their events. Admins see all events from all users.",
+    summary="Get all user events",
+    description="Get all events for the authenticated user",
     responses={
         200: {"description": "Events retrieved successfully"},
         401: {"description": "Authentication required"}
     }
 )
 async def get_all_events(
-        current_user: User = Depends(get_current_active_user),  # Ambos roles permitidos
+        current_user: User = Depends(get_current_active_user),
         db: AsyncSession = Depends(get_db_session)
 ):
     """
-    Get events based on user role
+    Get all events for the current user
 
     **Requires authentication (JWT token)**
 
-    - **General users**: Returns only their own events
-    - **Admin users**: Returns events from ALL users
+    Returns only the authenticated user's events.
     """
     repository = EventRepositoryImpl(db)
     service = QueryServiceImpl(repository)
 
-    # Admin can see all events, general users only their own
-    if current_user.is_admin():
-        # Get ALL events from ALL users
-        events = await repository.find_all()  # Necesitamos agregar este método
-    else:
-        # Get only current user's events
-        events = await service.get_user_events(str(current_user.id))
+    # Get only current user's events
+    events = await service.get_user_events(str(current_user.id))
 
     return EventResourceAssembler.to_list_response(events)
 
@@ -321,7 +320,7 @@ async def get_all_events(
     "/{event_id}",
     response_model=EventResponse,
     summary="Get event by ID",
-    description="General users can only view their own events. Admins can view any event.",
+    description="Get a specific event. User can only view their own events.",
     responses={
         200: {"description": "Event found"},
         401: {"description": "Authentication required"},
@@ -331,7 +330,7 @@ async def get_all_events(
 )
 async def get_event(
         event_id: int = Path(..., ge=1, description="Event ID to retrieve"),
-        current_user: User = Depends(get_current_active_user),  # Ambos roles permitidos
+        current_user: User = Depends(get_current_active_user),
         db: AsyncSession = Depends(get_db_session)
 ):
     """
@@ -339,8 +338,7 @@ async def get_event(
 
     **Requires authentication (JWT token)**
 
-    - **General users**: Can only view their own events
-    - **Admin users**: Can view any event
+    Users can only view their own events.
     """
     repository = EventRepositoryImpl(db)
     service = QueryServiceImpl(repository)
@@ -351,8 +349,8 @@ async def get_event(
     if not event:
         raise HTTPException(status_code=404, detail=f"Event {event_id} not found")
 
-    # Admin can view all events, general users only their own
-    if not current_user.is_admin() and event.user_id != str(current_user.id):
+    # Verify that the event belongs to the user
+    if event.user_id != str(current_user.id):
         raise HTTPException(
             status_code=403,
             detail="You don't have permission to view this event"
@@ -365,7 +363,7 @@ async def get_event(
     "/date/{target_date}",
     response_model=EventListResponse,
     summary="Get events by date",
-    description="General users see only their events. Admins see all events from all users on that date.",
+    description="Get all user events on a specific date",
     responses={
         200: {"description": "Events retrieved successfully"},
         401: {"description": "Authentication required"}
@@ -373,27 +371,22 @@ async def get_event(
 )
 async def get_events_by_date(
         target_date: date = Path(..., description="Target date (YYYY-MM-DD)"),
-        current_user: User = Depends(get_current_active_user),  # Ambos roles permitidos
+        current_user: User = Depends(get_current_active_user),
         db: AsyncSession = Depends(get_db_session)
 ):
     """
-    Get all events on a specific date
+    Get all events on a specific date for the current user
 
     **Requires authentication (JWT token)**
 
-    - **General users**: Returns only their own events on that date
-    - **Admin users**: Returns all events from all users on that date
+    Returns only the authenticated user's events on the specified date.
     """
     repository = EventRepositoryImpl(db)
     service = QueryServiceImpl(repository)
 
-    if current_user.is_admin():
-        # Admin: Get all events on this date from all users
-        events = await repository.find_by_date(target_date)  # Necesitamos agregar este método
-    else:
-        # General user: Get only their events on this date
-        query = EventResourceAssembler.to_get_by_date_query(str(current_user.id), target_date)
-        events = await service.get_events_by_date(query)
+    # Get only current user's events on this date
+    query = EventResourceAssembler.to_get_by_date_query(str(current_user.id), target_date)
+    events = await service.get_events_by_date(query)
 
     return EventResourceAssembler.to_list_response(events)
 
@@ -402,7 +395,7 @@ async def get_events_by_date(
     "/upcoming",
     response_model=EventListResponse,
     summary="Get upcoming events",
-    description="General users see only their upcoming events. Admins see all upcoming events from all users.",
+    description="Get upcoming events for the authenticated user",
     responses={
         200: {"description": "Upcoming events retrieved successfully"},
         401: {"description": "Authentication required"}
@@ -410,32 +403,26 @@ async def get_events_by_date(
 )
 async def get_upcoming_events(
         limit: int = Query(50, ge=1, le=100, description="Maximum number of events to return"),
-        current_user: User = Depends(get_current_active_user),  # Ambos roles permitidos
+        current_user: User = Depends(get_current_active_user),
         db: AsyncSession = Depends(get_db_session)
 ):
     """
-    Get upcoming events
+    Get upcoming events for the current user
 
     **Requires authentication (JWT token)**
 
-    - **General users**: Returns only their upcoming pending events
-    - **Admin users**: Returns all upcoming pending events from all users
-
-    Returns only pending events with future dates, ordered by event_date
+    Returns only the authenticated user's upcoming pending events.
+    Events are filtered by future dates and pending status, ordered by event_date.
     """
     repository = EventRepositoryImpl(db)
     service = QueryServiceImpl(repository)
 
-    if current_user.is_admin():
-        # Admin: Get all upcoming events from all users
-        events = await repository.find_all_upcoming(datetime.now(UTC), limit)  # Necesitamos agregar
-    else:
-        # General user: Get only their upcoming events
-        query = EventResourceAssembler.to_get_upcoming_query(
-            user_id=str(current_user.id),
-            from_date=datetime.now(UTC),
-            limit=limit
-        )
-        events = await service.get_upcoming_events(query)
+    # Get only current user's upcoming events
+    query = EventResourceAssembler.to_get_upcoming_query(
+        user_id=str(current_user.id),
+        from_date=datetime.now(UTC),
+        limit=limit
+    )
+    events = await service.get_upcoming_events(query)
 
     return EventResourceAssembler.to_list_response(events)

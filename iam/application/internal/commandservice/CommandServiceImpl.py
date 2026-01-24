@@ -8,7 +8,6 @@ from iam.domain.model.commands.UserCommands import (
 )
 from iam.domain.repositories.UserRepository import UserRepository
 from iam.application.internal.tokenservice.JWTService import jwt_service
-from iam.domain.model.valueobjects.UserRole import UserRoleEnum
 
 
 class AuthenticationResponse:
@@ -39,7 +38,6 @@ class CommandServiceImpl:
         - Password must be at least 8 characters
         """
 
-
         # Validate username uniqueness
         if await self._repository.exists_by_username(command.username):
             raise ValueError(f"Username '{command.username}' is already taken")
@@ -56,18 +54,12 @@ class CommandServiceImpl:
         if len(command.username) < 3 or len(command.username) > 50:
             raise ValueError("Username must be between 3 and 50 characters")
 
-        # Validate role
-        valid_roles = [UserRoleEnum.GENERAL.value, UserRoleEnum.ADMIN.value]
-        if command.role not in valid_roles:
-            raise ValueError(f"Invalid role. Must be one of: {', '.join(valid_roles)}")
-
         # Create user aggregate
         user = User(
             username=command.username.lower().strip(),
             email=command.email.lower().strip(),
             hashed_password=User.hash_password(command.password),
             full_name=command.full_name,
-            role=command.role,
             is_active=True
         )
 
@@ -78,8 +70,7 @@ class CommandServiceImpl:
         access_token = jwt_service.create_access_token(
             user_id=saved_user.id,
             username=saved_user.username,
-            email=saved_user.email,
-            role=saved_user.role
+            email=saved_user.email
         )
         refresh_token = jwt_service.create_refresh_token(user_id=saved_user.id)
 
@@ -115,8 +106,7 @@ class CommandServiceImpl:
         access_token = jwt_service.create_access_token(
             user_id=user.id,
             username=user.username,
-            email=user.email,
-            role=user.role
+            email=user.email
         )
         refresh_token = jwt_service.create_refresh_token(user_id=user.id)
 
@@ -186,8 +176,7 @@ class CommandServiceImpl:
         access_token = jwt_service.create_access_token(
             user_id=user.id,
             username=user.username,
-            email=user.email,
-            role=user.role
+            email=user.email
         )
 
         return access_token

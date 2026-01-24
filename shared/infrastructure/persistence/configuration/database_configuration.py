@@ -3,15 +3,22 @@ from typing import AsyncGenerator, Any
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base
+from dotenv import load_dotenv
 import logging
+
+# Load environment variables from .env file
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-# Database URL from environment
-DATABASE_URL = os.environ.get(
-    "DATABASE_URL",
-    "postgresql+psycopg://postgres.bieakhdwiuigqllzyqft:#---#-1234-#---#@aws-1-us-east-1.pooler.supabase.com:5432/postgres"
-)
+# Database URL from environment variable
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    raise ValueError(
+        "DATABASE_URL not found in environment variables. "
+        "Please create a .env file with DATABASE_URL or set it as an environment variable."
+    )
 
 # Create async engine
 engine = create_async_engine(

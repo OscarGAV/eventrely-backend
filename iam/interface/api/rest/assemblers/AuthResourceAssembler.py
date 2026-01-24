@@ -1,3 +1,5 @@
+from iam.application.internal.commandservice.CommandServiceImpl import AuthenticationResponse
+from iam.domain.model.aggregates.User import User
 from iam.domain.model.commands.UserCommands import (
     SignUpCommand,
     SignInCommand,
@@ -11,7 +13,6 @@ from iam.domain.model.queries.UserQueries import (
     GetUserByEmailQuery,
     GetAllUsersQuery
 )
-from iam.domain.model.aggregates.User import User
 from iam.interface.api.rest.resources.AuthRequestResource import (
     SignUpRequest,
     SignInRequest,
@@ -20,10 +21,8 @@ from iam.interface.api.rest.resources.AuthRequestResource import (
 )
 from iam.interface.api.rest.resources.AuthResponseResource import (
     UserResponse,
-    AuthenticationResponse as AuthResponseDTO,
-    UserListResponse
+    AuthenticationResponse as AuthResponseDTO
 )
-from iam.application.internal.commandservice.CommandServiceImpl import AuthenticationResponse
 
 
 class AuthResourceAssembler:
@@ -42,7 +41,6 @@ class AuthResourceAssembler:
             username=request.username,
             email=request.email,
             password=request.password,
-            role=request.role,
             full_name=request.full_name
         )
 
@@ -113,7 +111,6 @@ class AuthResourceAssembler:
             username=user.username,
             email=user.email,
             full_name=user.full_name,
-            role=user.role,
             is_active=user.is_active,
             created_at=user.created_at,
             updated_at=user.updated_at
@@ -127,12 +124,4 @@ class AuthResourceAssembler:
             access_token=auth_response.access_token,
             refresh_token=auth_response.refresh_token,
             token_type="Bearer"
-        )
-
-    @staticmethod
-    def to_user_list_response(users: list[User]) -> UserListResponse:
-        """Convert list[User] → UserListResponse"""
-        return UserListResponse(
-            users=[AuthResourceAssembler.to_user_response(u) for u in users],
-            total=len(users)
         )

@@ -12,8 +12,8 @@ from remindermanagement.interface.api.rest.resources.EventResponseResource impor
 
 class EventResourceAssembler:
     """
-    Assembler para transformar entre capa de presentación y dominio
-    Transformaciones: Resource ↔ Command/Query
+    Assembler to transform between presentation and domain layers
+    Transformations: Resource ↔ Command/Query
     """
 
     # =========================================================================
@@ -21,17 +21,23 @@ class EventResourceAssembler:
     # =========================================================================
 
     @staticmethod
-    def to_create_command(resource: CreateEventRequest) -> CreateEventCommand:
-        """Convertir CreateEventRequest → CreateEventCommand"""
+    def to_create_command(resource: CreateEventRequest, user_id: str) -> CreateEventCommand:
+        """
+        Convert CreateEventRequest → CreateEventCommand
+
+        Args:
+            resource: The request data
+            user_id: User ID from JWT token (NOT from request body)
+        """
         return CreateEventCommand(
-            user_id=resource.user_id,
+            user_id=user_id,
             title=resource.title,
             event_date=resource.event_date,
         )
 
     @staticmethod
     def to_update_command(event_id: int, resource: UpdateEventRequest) -> UpdateEventCommand:
-        """Convertir UpdateEventRequest → UpdateEventCommand"""
+        """Convert UpdateEventRequest → UpdateEventCommand"""
         return UpdateEventCommand(
             event_id=event_id,
             title=resource.title,
@@ -40,7 +46,7 @@ class EventResourceAssembler:
 
     @staticmethod
     def to_delete_command(event_id: int) -> DeleteEventCommand:
-        """Crear DeleteEventCommand"""
+        """Create DeleteEventCommand"""
         return DeleteEventCommand(event_id=event_id)
 
     # =========================================================================
@@ -49,12 +55,12 @@ class EventResourceAssembler:
 
     @staticmethod
     def to_get_by_id_query(event_id: int) -> GetEventByIdQuery:
-        """Crear GetEventByIdQuery"""
+        """Create GetEventByIdQuery"""
         return GetEventByIdQuery(event_id=event_id)
 
     @staticmethod
     def to_get_by_date_query(user_id: str, target_date: date) -> GetEventsByDateQuery:
-        """Crear GetEventsByDateQuery"""
+        """Create GetEventsByDateQuery"""
         return GetEventsByDateQuery(
             user_id=user_id,
             target_date=target_date
@@ -62,7 +68,7 @@ class EventResourceAssembler:
 
     @staticmethod
     def to_get_upcoming_query(user_id: str, from_date: datetime, limit: int) -> GetUpcomingEventsQuery:
-        """Crear GetUpcomingEventsQuery"""
+        """Create GetUpcomingEventsQuery"""
         return GetUpcomingEventsQuery(
             user_id=user_id,
             from_date=from_date,
@@ -75,10 +81,9 @@ class EventResourceAssembler:
 
     @staticmethod
     def to_response(event: Event) -> EventResponse:
-        """Convertir Event → EventResponse"""
+        """Convert Event → EventResponse"""
         return EventResponse(
             id=event.id,
-            user_id=event.user_id,
             title=event.title,
             event_date=event.event_date,
             status=event.status,
@@ -88,7 +93,7 @@ class EventResourceAssembler:
 
     @staticmethod
     def to_list_response(events: list[Event]) -> EventListResponse:
-        """Convertir lista de Event → EventListResponse"""
+        """Convert list of Event → EventListResponse"""
         return EventListResponse(
             events=[EventResourceAssembler.to_response(e) for e in events],
             total=len(events)

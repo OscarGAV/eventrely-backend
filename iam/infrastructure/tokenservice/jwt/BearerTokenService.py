@@ -71,44 +71,6 @@ async def get_current_active_user(
     return current_user
 
 
-async def get_current_admin_user(
-        current_user: User = Depends(get_current_active_user)
-) -> User:
-    """
-    Get current user and ensure they have admin role
-
-    Usage:
-        @router.get("/admin-only")
-        async def admin_route(admin_user: User = Depends(get_current_admin_user)):
-            return {"message": "Admin access granted"}
-    """
-    if not current_user.is_admin():
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required"
-        )
-    return current_user
-
-
-async def get_current_general_user(
-        current_user: User = Depends(get_current_active_user)
-) -> User:
-    """
-    Get current user and ensure they have general user role
-
-    Usage:
-        @router.post("/general-only")
-        async def general_route(user: User = Depends(get_current_general_user)):
-            return {"message": "General user access"}
-    """
-    if not current_user.is_general_user():
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="This action is only available for general users"
-        )
-    return current_user
-
-
 def get_user_id_from_token_dependency(
         credentials: HTTPAuthorizationCredentials = Depends(security)
 ) -> int:

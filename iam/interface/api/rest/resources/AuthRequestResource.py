@@ -6,16 +6,7 @@ class SignUpRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=50, description="Unique username")
     email: str = Field(..., description="User email address")
     password: str = Field(..., min_length=8, description="User password (min 8 chars)")
-    role: str = Field(..., description="User role: 'general_user' or 'admin_user'")
     full_name: str | None = Field(None, max_length=200, description="Full name (optional)")
-
-    @field_validator('role')
-    @classmethod
-    def role_valid(cls, v: str) -> str:
-        valid_roles = ['general_user', 'admin_user']
-        if v not in valid_roles:
-            raise ValueError(f'Role must be one of: {", ".join(valid_roles)}')
-        return v
 
     @field_validator('username')
     @classmethod
@@ -38,7 +29,6 @@ class SignUpRequest(BaseModel):
                     "username": "johndoe",
                     "email": "john@example.com",
                     "password": "SecurePass123!",
-                    "role": "general_user",
                     "full_name": "John Doe"
                 }
             ]

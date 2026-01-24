@@ -3,10 +3,9 @@ from datetime import datetime
 
 
 class CreateEventRequest(BaseModel):
-    """DTO de entrada para crear evento"""
-    user_id: str = Field(..., min_length=1, description="ID del usuario")
-    title: str = Field(..., min_length=1, max_length=200, description="Título del evento")
-    event_date: datetime = Field(..., description="Fecha y hora del evento (ISO 8601)")
+    """DTO for creating an event"""
+    title: str = Field(..., min_length=1, max_length=200, description="Event title")
+    event_date: datetime = Field(..., description="Event date and time (ISO 8601 format)")
 
     @field_validator('title')
     @classmethod
@@ -19,9 +18,8 @@ class CreateEventRequest(BaseModel):
         "json_schema_extra": {
             "examples": [
                 {
-                    "user_id": "user_123",
-                    "title": "Pagar alquiler",
-                    "event_date": "2025-12-22T10:00:00",
+                    "title": "Pay rent",
+                    "event_date": "2026-12-22T10:00:00"
                 }
             ]
         }
@@ -29,7 +27,7 @@ class CreateEventRequest(BaseModel):
 
 
 class UpdateEventRequest(BaseModel):
-    """DTO de entrada para actualizar evento"""
+    """DTO for updating an event"""
     title: str | None = Field(None, min_length=1, max_length=200)
     event_date: datetime | None = None
 
@@ -37,8 +35,8 @@ class UpdateEventRequest(BaseModel):
         "json_schema_extra": {
             "examples": [
                 {
-                    "title": "Pagar alquiler - URGENTE",
-                    "event_date": "2025-12-23T10:00:00"
+                    "title": "Pay rent - URGENT",
+                    "event_date": "2026-12-23T10:00:00"
                 }
             ]
         }

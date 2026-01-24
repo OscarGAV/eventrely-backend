@@ -1,7 +1,5 @@
 from dataclasses import dataclass
 
-from iam.domain.model.valueobjects.UserRole import UserRole
-
 
 @dataclass(frozen=True)
 class SignUpCommand:
@@ -11,7 +9,6 @@ class SignUpCommand:
     username: str
     email: str
     password: str
-    role: str
     full_name: str | None = None
 
 

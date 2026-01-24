@@ -7,9 +7,8 @@ from iam.domain.model.aggregates.User import User
 from iam.infrastructure.persistence.repositories.UserRepositoryImpl import UserRepositoryImpl
 from iam.infrastructure.tokenservice.jwt.BearerTokenService import (
     get_current_user,
-    get_current_active_user, get_current_admin_user
+    get_current_active_user
 )
-
 from iam.interface.api.rest.assemblers.AuthResourceAssembler import AuthResourceAssembler
 from iam.interface.api.rest.resources.AuthRequestResource import (
     SignUpRequest,
@@ -21,12 +20,9 @@ from iam.interface.api.rest.resources.AuthRequestResource import (
 from iam.interface.api.rest.resources.AuthResponseResource import (
     UserResponse,
     AuthenticationResponse,
-    TokenResponse,
-    UserListResponse
+    TokenResponse
 )
-
 from shared.infrastructure.persistence.configuration.database_configuration import get_db_session
-
 
 router = APIRouter(prefix="/api/v1/auth", tags=["Authentication"])
 
@@ -56,7 +52,6 @@ async def sign_up(
     - **username**: Unique username (3-50 chars, alphanumeric)
     - **email**: Unique email address
     - **password**: Password (minimum 8 characters)
-    - **role**: User role
     - **full_name**: Optional full name
 
     Returns user data and JWT tokens (access + refresh)
@@ -330,34 +325,3 @@ async def get_user(
         raise HTTPException(status_code=404, detail=f"User {user_id} not found")
 
     return AuthResourceAssembler.to_user_response(user)
-
-
-@router.get(
-    "/users",
-    response_model=UserListResponse,
-    summary="Get all users",
-    description="Get list of all users (admin only)",
-    responses={
-        200: {"description": "Users retrieved successfully"},
-        401: {"description": "Authentication required"},
-        403: {"description": "Admin access required"}
-    }
-)
-async def get_all_users(
-        current_user: User = Depends(get_current_admin_user),
-        db: AsyncSession = Depends(get_db_session)
-):
-    """
-    Get all users
-
-    Returns list of all users.
-    """
-    if current_user.is_admin():
-        repository = UserRepositoryImpl(db)
-        service = QueryServiceImpl(repository)
-
-        AuthResourceAssembler.to_get_all_query()
-        users = await service.get_all_users()
-
-        return AuthResourceAssembler.to_user_list_response(users)
-    return None

@@ -8,7 +8,6 @@ class UserResponse(BaseModel):
     username: str = Field(..., description="Username")
     email: str = Field(..., description="Email address")
     full_name: str | None = Field(None, description="Full name")
-    role: str = Field(..., description="User role (general_user or admin_user)")
     is_active: bool = Field(..., description="Account status")
     created_at: datetime = Field(..., description="Registration date")
     updated_at: datetime = Field(..., description="Last update date")
@@ -22,7 +21,6 @@ class UserResponse(BaseModel):
                     "username": "johndoe",
                     "email": "john@example.com",
                     "full_name": "John Doe",
-                    "role": "general_user",
                     "is_active": True,
                     "created_at": "2025-01-05T10:00:00Z",
                     "updated_at": "2025-01-05T10:00:00Z"
@@ -65,9 +63,3 @@ class TokenResponse(BaseModel):
     """DTO for token refresh response"""
     access_token: str = Field(..., description="New JWT access token")
     token_type: str = Field(default="Bearer", description="Token type")
-
-
-class UserListResponse(BaseModel):
-    """DTO for list of users"""
-    users: list[UserResponse]
-    total: int = Field(..., description="Total number of users")

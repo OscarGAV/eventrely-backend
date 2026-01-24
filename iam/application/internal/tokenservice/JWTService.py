@@ -3,6 +3,10 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 import jwt
 from jwt.exceptions import InvalidTokenError
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 
 class JWTService:
@@ -11,13 +15,20 @@ class JWTService:
     """
 
     def __init__(self):
-        # Get secret from environment or use default (change in production!)
-        self.secret_key = os.environ.get("JWT_SECRET_KEY", "your-secret-key-change-this")
+        # Get secret from environment variable
+        self.secret_key = os.getenv("JWT_SECRET_KEY")
+
+        if not self.secret_key:
+            raise ValueError(
+                "JWT_SECRET_KEY not found in environment variables. "
+                "Please create a .env file with JWT_SECRET_KEY or set it as an environment variable."
+            )
+
         self.algorithm = "HS256"
         self.access_token_expire_minutes = 30  # 30 minutes
         self.refresh_token_expire_days = 7  # 7 days
 
-    def create_access_token(self, user_id: int, username: str, email: str, role: str) -> str:
+    def create_access_token(self, user_id: int, username: str, email: str) -> str:
         """
         Create JWT access token
         """
@@ -27,7 +38,6 @@ class JWTService:
             "sub": str(user_id),  # Subject (user_id)
             "username": username,
             "email": email,
-            "role": role,  # Include role in token
             "type": "access",
             "exp": expire,
             "iat": datetime.now(timezone.utc)
