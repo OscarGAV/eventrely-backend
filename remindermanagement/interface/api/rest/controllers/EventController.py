@@ -317,6 +317,43 @@ async def get_all_events(
 
 
 @router.get(
+    "/upcoming",
+    response_model=EventListResponse,
+    summary="Get upcoming events",
+    description="Get upcoming events for the authenticated user",
+    responses={
+        200: {"description": "Upcoming events retrieved successfully"},
+        401: {"description": "Authentication required"}
+    }
+)
+async def get_upcoming_events(
+        limit: int = Query(50, ge=1, le=100, description="Maximum number of events to return"),
+        current_user: User = Depends(get_current_active_user),
+        db: AsyncSession = Depends(get_db_session)
+):
+    """
+    Get upcoming events for the current user
+
+    **Requires authentication (JWT token)**
+
+    Returns only the authenticated user's upcoming pending events.
+    Events are filtered by future dates and pending status, ordered by event_date.
+    """
+    repository = EventRepositoryImpl(db)
+    service = QueryServiceImpl(repository)
+
+    # Get only current user's upcoming events
+    query = EventResourceAssembler.to_get_upcoming_query(
+        user_id=str(current_user.id),
+        from_date=datetime.now(UTC),
+        limit=limit
+    )
+    events = await service.get_upcoming_events(query)
+
+    return EventResourceAssembler.to_list_response(events)
+
+
+@router.get(
     "/{event_id}",
     response_model=EventResponse,
     summary="Get event by ID",
@@ -387,42 +424,5 @@ async def get_events_by_date(
     # Get only current user's events on this date
     query = EventResourceAssembler.to_get_by_date_query(str(current_user.id), target_date)
     events = await service.get_events_by_date(query)
-
-    return EventResourceAssembler.to_list_response(events)
-
-
-@router.get(
-    "/upcoming",
-    response_model=EventListResponse,
-    summary="Get upcoming events",
-    description="Get upcoming events for the authenticated user",
-    responses={
-        200: {"description": "Upcoming events retrieved successfully"},
-        401: {"description": "Authentication required"}
-    }
-)
-async def get_upcoming_events(
-        limit: int = Query(50, ge=1, le=100, description="Maximum number of events to return"),
-        current_user: User = Depends(get_current_active_user),
-        db: AsyncSession = Depends(get_db_session)
-):
-    """
-    Get upcoming events for the current user
-
-    **Requires authentication (JWT token)**
-
-    Returns only the authenticated user's upcoming pending events.
-    Events are filtered by future dates and pending status, ordered by event_date.
-    """
-    repository = EventRepositoryImpl(db)
-    service = QueryServiceImpl(repository)
-
-    # Get only current user's upcoming events
-    query = EventResourceAssembler.to_get_upcoming_query(
-        user_id=str(current_user.id),
-        from_date=datetime.now(UTC),
-        limit=limit
-    )
-    events = await service.get_upcoming_events(query)
 
     return EventResourceAssembler.to_list_response(events)
